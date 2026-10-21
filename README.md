@@ -32,8 +32,8 @@ that. Click it for the list, click a session to jump to its terminal tab.
 - **Shows what each session is doing**: its title, Claude Code's latest recap or last
   reply, the project and branch, the permission mode (bypass, plan, auto, accept
   edits, ask), how much of the context window is used, and the subagents still running.
-- **Jumps to the exact tab.** In Ghostty, clicking a session focuses the very tab it
-  runs in. Other terminals (Terminal, iTerm2, Warp, kitty, the VS Code terminal) are
+- **Jumps to the exact tab.** In Ghostty, clicking a session focuses the very tab or
+  split it runs in, found through the session's own terminal. Other terminals (Terminal, iTerm2, Warp, kitty, the VS Code terminal) are
   brought to the front.
 - **Starts new sessions.** Pick a workspace and run Claude, a session on a new
   branch, Codex, or a plain shell in a new Ghostty tab. A branch name on your
@@ -52,10 +52,12 @@ that. Click it for the list, click a session to jump to its terminal tab.
 The menu bar icon opens Settings. Its light shows the state at a glance: none when
 all is quiet, small while sessions run, full when one needs you.
 
-On a Mac with a notch, choose **Notch** in Settings and the counts sit either side of it:
+On a Mac with a notch, choose **Notch** in Settings. The notch itself becomes the button, and a
+black chin, no wider than the notch, hangs below it while something needs you or the pointer
+is over it, so it never covers your menu bar icons:
 
 <p align="center">
-  <img src="docs/images/notch.png" width="340" alt="Counts either side of the notch">
+  <img src="docs/images/notch.png" width="340" alt="The chin below the notch">
 </p>
 
 ## Install

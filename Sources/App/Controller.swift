@@ -28,7 +28,7 @@ final class IndicatorHost<Content: View>: ClickThroughHost<Content> {
     }
 }
 
-/// Owns everything on screen: the indicator (corner tray or notch wings) that opens the
+/// Owns everything on screen: the indicator (corner tray or the notch and its chin) that opens the
 /// session list, and the menu bar item that opens Settings.
 @MainActor
 final class Controller: NSObject {
@@ -46,9 +46,9 @@ final class Controller: NSObject {
     private var clickMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
     private var snoozedUntil: Date?
+    private var notchHover = false
 
     private static let margin: CGFloat = 2
-    private static let wing: CGFloat = 52
 
     init(store: SessionStore) {
         self.store = store
@@ -112,16 +112,27 @@ final class Controller: NSObject {
             snoozedUntil = nil
         }
         if store.threads.isEmpty { return false }
+        // The notch stays clickable everywhere: over the notch it covers nothing.
+        if store.state.placement == .notch && notchScreen != nil { return true }
         if sheet != nil && anchor == .indicator { return true }
         if store.state.hideInTerminal && terminalIsFrontmost { return false }
         return true
     }
 
+    private var notchScreen: NSScreen? { NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) }
+
+    /// The chin shows while something needs you (unless a terminal is in front and the
+    /// person asked for quiet there), while the pointer is on the notch, or while its list is open.
+    private var showChin: Bool {
+        if notchHover || (sheet != nil && anchor == .indicator) { return true }
+        if store.state.hideInTerminal && terminalIsFrontmost { return false }
+        return Tally(store).needs > 0
+    }
+
     private func layout() {
         updateStatusItem()
         if shouldShowIndicator {
-            if store.state.placement == .notch, let screen = NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }),
-               let notch = Self.notchRect(on: screen) {
+            if store.state.placement == .notch, let screen = notchScreen, let notch = Self.notchRect(on: screen) {
                 showNotch(notch)
             } else {
                 showTray()
@@ -157,8 +168,14 @@ final class Controller: NSObject {
     }
 
     private func showNotch(_ notch: NSRect) {
-        let view = NotchView(store: store, notchWidth: notch.width, height: notch.height, wing: Self.wing,
-                             onTap: { [weak self] in self?.toggle(.list, from: .indicator) })
+        let chin = showChin
+        let view = NotchView(store: store, notchWidth: notch.width, notchHeight: notch.height, showChin: chin,
+                             onTap: { [weak self] in self?.toggle(.list, from: .indicator) },
+                             onHover: { [weak self] inside in
+                                 guard let self, self.notchHover != inside else { return }
+                                 self.notchHover = inside
+                                 self.layout()
+                             })
         if let host = notchHost {
             host.rootView = view
         } else {
@@ -168,10 +185,11 @@ final class Controller: NSObject {
             notchHost = host
         }
         if indicatorPanel.contentView !== notchHost { indicatorPanel.contentView = notchHost }
-        // Above the menu bar, so the wings sit level with the notch.
+        // Above the menu bar, so the panel can sit over the notch itself.
         indicatorPanel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
-        let frame = NSRect(x: notch.minX - Self.wing, y: notch.minY, width: notch.width + 2 * Self.wing, height: notch.height)
-        // The wings read as part of the notch, so they cast no shadow.
+        let extra = chin ? NotchView.chinHeight : 0
+        let frame = NSRect(x: notch.minX, y: notch.minY - extra, width: notch.width, height: notch.height + extra)
+        // It reads as part of the notch, so it casts no shadow.
         indicatorPanel.hasShadow = false
         setFrame(indicatorPanel, frame)
     }

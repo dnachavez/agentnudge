@@ -225,47 +225,62 @@ struct TrayView: View {
     }
 }
 
-/// Wings either side of the notch, in the notch's own black so they read as part of it.
+/// The notch indicator. It never reaches sideways into the menu bar, so it can't cover
+/// menu bar icons: the notch itself is the click target, and a black chin hangs below it,
+/// exactly as wide, while something needs you or the pointer is over it.
 struct NotchView: View {
     @ObservedObject var store: SessionStore
     let notchWidth: CGFloat
-    let height: CGFloat
-    let wing: CGFloat
+    let notchHeight: CGFloat
+    let showChin: Bool
     var onTap: () -> Void
+    var onHover: (Bool) -> Void
+
+    static let chinHeight: CGFloat = 26
 
     var body: some View {
         let t = Tally(store)
-        HStack(spacing: 0) {
-            HStack(spacing: 7) {
-                if t.needs > 0 {
-                    Dot(color: Theme.waiting, size: 7, glow: true, pulse: true)
-                    Text("\(t.needs)").foregroundStyle(Theme.text)
-                }
+        VStack(spacing: 0) {
+            Color.black.frame(width: notchWidth, height: notchHeight)
+            if showChin {
+                chin(t)
+                    .frame(width: notchWidth, height: Self.chinHeight)
+                    .background(Color.black)
+                    .overlay(alignment: .bottom) { if t.needs > 0 { NotchGlow(width: notchWidth) } }
             }
-            .frame(width: wing)
-            Color.clear.frame(width: notchWidth)
-            HStack(spacing: 7) {
-                if t.running > 0 {
-                    Dot(color: Theme.running, size: 6)
-                    Text("\(t.running)").foregroundStyle(Theme.sub)
-                }
-            }
-            .frame(width: wing)
         }
         .font(.system(size: 12, weight: .semibold))
         .monospacedDigit()
-        .frame(height: height)
-        .background(NotchShape(radius: min(10, height / 3)).fill(Color.black))
-        .overlay(alignment: .bottom) {
-            // A glow along the notch's lower edge while something needs you.
-            if t.needs > 0 { NotchGlow(width: notchWidth + 2 * wing) }
-        }
+        .clipShape(NotchShape(radius: 10))
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
+        .onHover(perform: onHover)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(t.spoken)
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default, onTap)
+    }
+
+    @ViewBuilder private func chin(_ t: Tally) -> some View {
+        HStack(spacing: 8) {
+            if t.needs > 0 {
+                Dot(color: Theme.waiting, size: 7, glow: true, pulse: true)
+                Text("\(t.needs) waiting").foregroundStyle(Theme.text)
+                if t.running > 0 {
+                    Divot()
+                    Text("\(t.running) running").foregroundStyle(Theme.sub)
+                }
+            } else if t.running > 0 {
+                Dot(color: Theme.running, size: 6)
+                Text("\(t.running) running").foregroundStyle(Theme.text)
+            } else if t.idle > 0 {
+                Dot(color: Theme.idle, size: 6)
+                Text("\(t.idle) idle").foregroundStyle(Theme.sub)
+            } else {
+                Text("All clear").foregroundStyle(Theme.sub)
+            }
+        }
+        .padding(.bottom, 2)
     }
 }
 

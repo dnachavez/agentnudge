@@ -84,6 +84,45 @@ enum Ghostty {
         return sameFolder.first(where: { isAgentTab($0.name) })
     }
 
+    /// Focuses the exact terminal a session runs in. Ghostty doesn't say which process runs
+    /// in which terminal, so this asks the session's own tty: it briefly sets the tab title
+    /// to a one-off marker, finds the terminal now showing it, puts the title back, and
+    /// focuses that terminal. Folder and title matching is the fallback.
+    static func reveal(_ thread: AgentThread, tty: String?, otherwise: @escaping () -> Void) {
+        terminals { before in
+            guard let before, !before.isEmpty else { return otherwise() }
+            func byGuess() {
+                if let guess = match(thread, in: before) { focus(guess) } else { otherwise() }
+            }
+            guard let tty, let handle = FileHandle(forWritingAtPath: tty) else { return byGuess() }
+            let marker = "agentnudge-\(UUID().uuidString.prefix(8))"
+            handle.write(title(marker))
+
+            func look(_ attempt: Int) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) {
+                    terminals { after in
+                        if let hit = after?.first(where: { $0.name.contains(marker) }) {
+                            handle.write(title(before.first { $0.id == hit.id }?.name ?? ""))
+                            try? handle.close()
+                            focus(hit)
+                        } else if attempt < 10 {
+                            look(attempt + 1)
+                        } else {
+                            try? handle.close()
+                            byGuess()
+                        }
+                    }
+                }
+            }
+            look(0)
+        }
+    }
+
+    /// The escape sequence that sets a terminal's title (OSC 2).
+    private static func title(_ text: String) -> Data {
+        Data("\u{1b}]2;\(text)\u{07}".utf8)
+    }
+
     static func focus(_ terminal: Terminal) {
         run("tell application id \"\(bundleID)\" to focus (first terminal whose id is \(quoted(terminal.id)))")
     }

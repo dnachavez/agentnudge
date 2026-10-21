@@ -22,7 +22,7 @@ enum Snapshot {
         }
         render(SettingsPanel(store: store, onQuit: {}), "settings", dir)
         render(ListView(store: store, onOpen: { _ in }, initialTab: .needsYou, launching: true), "launcher", dir)
-        render(NotchView(store: store, notchWidth: 190, height: 32, wing: 52, onTap: {}).padding(20), "notch", dir)
+        render(NotchView(store: store, notchWidth: 200, notchHeight: 32, showChin: true, onTap: {}, onHover: { _ in }).padding(20), "notch", dir)
         let glyphs = HStack(spacing: 28) {
             ForEach([StatusGlyph.State.quiet, .running, .attention], id: \.self) { state in
                 Image(nsImage: StatusGlyph.image(state)).renderingMode(.template).foregroundStyle(.white)
