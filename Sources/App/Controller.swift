@@ -23,10 +23,9 @@ class ClickThroughHost<Content: View>: NSHostingView<Content> {
 final class IndicatorHost<Content: View>: ClickThroughHost<Content> {
     var onRightClick: (() -> Void)?
     /// When set, the host tells a click from a drag itself: a click calls `onClick`, and a
-    /// drag moves the window (if `canDrag` says so) and reports where it ended up.
+    /// drag hands the window to the window server to move (if `canDrag` says so).
     var onClick: (() -> Void)?
     var canDrag: () -> Bool = { false }
-    var onMoved: ((NSPoint) -> Void)?
 
     override func rightMouseDown(with event: NSEvent) {
         if let onRightClick { onRightClick() } else { super.rightMouseDown(with: event) }
@@ -42,8 +41,9 @@ final class IndicatorHost<Content: View>: ClickThroughHost<Content> {
             }
             let moved = hypot(next.locationInWindow.x - start.x, next.locationInWindow.y - start.y)
             if moved > 3 && canDrag() {
+                // This returns before the drag ends; the controller saves the spot from the
+                // window's own move notifications instead.
                 window.performDrag(with: event)
-                onMoved?(window.frame.origin)
                 return
             }
         }
@@ -68,6 +68,8 @@ final class Controller: NSObject {
     private var clickMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
     private var snoozedUntil: Date?
+    /// True while the controller itself moves the indicator, so only the person's drags are saved.
+    private var placingIndicator = false
 
     private static let margin: CGFloat = 2
 
@@ -80,7 +82,6 @@ final class Controller: NSObject {
         trayHost.host.onRightClick = { [weak self] in self?.toggle(.settings, from: .indicator) }
         trayHost.host.onClick = { [weak self] in self?.toggle(.list, from: .indicator) }
         trayHost.host.canDrag = { [weak self] in self?.store.state.placement == .free }
-        trayHost.host.onMoved = { [weak self] origin in self?.store.setFreeOrigin(origin) }
         indicatorPanel = makePanel()
         indicatorPanel.isMovable = true
         indicatorPanel.contentView = trayHost
@@ -93,6 +94,8 @@ final class Controller: NSObject {
             .sink { [weak self] _ in self?.layout() }
             .store(in: &cancellables)
 
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(indicatorMoved), name: NSWindow.didMoveNotification, object: indicatorPanel)
         NSWorkspace.shared.notificationCenter.addObserver(
             self, selector: #selector(environmentChanged), name: NSWorkspace.didActivateApplicationNotification, object: nil)
         NotificationCenter.default.addObserver(
@@ -121,6 +124,12 @@ final class Controller: NSObject {
     }
 
     @objc private func environmentChanged() { layout() }
+
+    /// In Free mode, remembers every spot the person drags the tray to.
+    @objc private func indicatorMoved() {
+        guard !placingIndicator, store.state.placement == .free, indicatorPanel.contentView === trayHost else { return }
+        store.setFreeOrigin(indicatorPanel.frame.origin)
+    }
 
     // MARK: Indicator
 
@@ -235,7 +244,9 @@ final class Controller: NSObject {
     /// from the new content once SwiftUI has drawn it.
     private func setFrame(_ panel: NSPanel, _ frame: NSRect) {
         let resized = panel.frame.size != frame.size
+        placingIndicator = true
         panel.setFrame(frame, display: true)
+        placingIndicator = false
         guard resized, panel.hasShadow else { return }
         DispatchQueue.main.async { panel.invalidateShadow() }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.08) { panel.invalidateShadow() }

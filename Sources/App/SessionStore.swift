@@ -387,11 +387,18 @@ final class SessionStore: ObservableObject {
         commit()
     }
 
-    /// Remembers where the tray was dragged. Saved without a refresh: nothing else changes.
+    private var pendingSave: DispatchWorkItem?
+
+    /// Remembers where the tray was dragged. A drag reports many moves, so the file is
+    /// written once it settles.
     func setFreeOrigin(_ origin: CGPoint) {
+        guard state.freeX != Double(origin.x) || state.freeY != Double(origin.y) else { return }
         state.freeX = Double(origin.x)
         state.freeY = Double(origin.y)
-        state.save()
+        pendingSave?.cancel()
+        let save = DispatchWorkItem { [weak self] in self?.state.save() }
+        pendingSave = save
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.4, execute: save)
     }
 
     func setCorner(_ corner: Corner) {
