@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- AgentNudge mark. A radius-36 disc in four quarters with a 5-unit gutter; three quarters are the agents, the fourth is a radius-13 light: the one that needs you. -->
+  <g fill="#FFFFFF"><path d="M47.5 47.5 H11.5 A36 36 0 0 1 47.5 11.5 Z"/><path d="M52.5 47.5 V11.5 A36 36 0 0 1 88.5 47.5 Z"/><path d="M47.5 52.5 V88.5 A36 36 0 0 1 11.5 52.5 Z"/></g>
+  <circle cx="70.5" cy="70.5" r="13" fill="#FFFFFF"/>
+</svg>

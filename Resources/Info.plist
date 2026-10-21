@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDisplayName</key>
+	<string>AgentNudge</string>
+	<key>CFBundleExecutable</key>
+	<string>AgentNudge</string>
+	<key>CFBundleIconFile</key>
+	<string>AgentNudge</string>
+	<key>CFBundleIconName</key>
+	<string>AgentNudge</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.nikkk.agentnudge</string>
+	<key>CFBundleName</key>
+	<string>AgentNudge</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>__VERSION__</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.nikkk.agentnudge</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>agentnudge</string>
+			</array>
+		</dict>
+	</array>
+	<key>CFBundleVersion</key>
+	<string>__VERSION__</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>14.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>AgentNudge brings the right Ghostty tab forward and opens new sessions in Ghostty.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+</dict>
+</plist>
