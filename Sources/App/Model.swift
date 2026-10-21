@@ -70,11 +70,12 @@ struct Usage: Equatable {
 
 /// Where the indicator lives. The menu bar icon can be on alongside any of them.
 enum Placement: String, Codable, CaseIterable {
-    case corner, notch, menuBarOnly
+    case corner, free, notch, menuBarOnly
 
     var label: String {
         switch self {
         case .corner: return "Corner"
+        case .free: return "Free"
         case .notch: return "Notch"
         case .menuBarOnly: return "Off"
         }
@@ -103,6 +104,9 @@ struct PersistedState: Codable {
     var later: [String: Double] = [:]
     var done: [String: Double] = [:]
     var placement: Placement = .corner
+    /// Where the tray was dragged to in Free mode: its bottom-left corner, in screen points.
+    var freeX: Double?
+    var freeY: Double?
     var corner: Corner = .bottomRight
     var showMenuBar: Bool = true
     var hideInTerminal: Bool = true
@@ -126,6 +130,8 @@ struct PersistedState: Codable {
         later = try c.decodeIfPresent([String: Double].self, forKey: .later) ?? [:]
         done = try c.decodeIfPresent([String: Double].self, forKey: .done) ?? [:]
         placement = try c.decodeIfPresent(Placement.self, forKey: .placement) ?? .corner
+        freeX = try c.decodeIfPresent(Double.self, forKey: .freeX)
+        freeY = try c.decodeIfPresent(Double.self, forKey: .freeY)
         corner = try c.decodeIfPresent(Corner.self, forKey: .corner) ?? .bottomRight
         showMenuBar = try c.decodeIfPresent(Bool.self, forKey: .showMenuBar) ?? true
         hideInTerminal = try c.decodeIfPresent(Bool.self, forKey: .hideInTerminal) ?? true

@@ -41,6 +41,8 @@ that. Click it for the list, click a session to jump to its terminal tab.
 - **Shows your plan usage**: the 5-hour and 7-day windows, and when each resets.
 - **Reads Codex too**: threads from the Codex app and CLI that were active in the
   last day, with the same sorting.
+- **Goes where you want.** Pin the tray to a corner, choose **Free** and drag it
+  anywhere (it stays where you leave it), or put it around the notch.
 - **Stays out of the way.** It hides while a terminal is in front, takes no Dock
   space, and is about 1 MB of native AppKit and SwiftUI.
 

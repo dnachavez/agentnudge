@@ -22,9 +22,31 @@ class ClickThroughHost<Content: View>: NSHostingView<Content> {
 /// The indicator's host, which also reports right-clicks so the indicator can open Settings.
 final class IndicatorHost<Content: View>: ClickThroughHost<Content> {
     var onRightClick: (() -> Void)?
+    /// When set, the host tells a click from a drag itself: a click calls `onClick`, and a
+    /// drag moves the window (if `canDrag` says so) and reports where it ended up.
+    var onClick: (() -> Void)?
+    var canDrag: () -> Bool = { false }
+    var onMoved: ((NSPoint) -> Void)?
 
     override func rightMouseDown(with event: NSEvent) {
         if let onRightClick { onRightClick() } else { super.rightMouseDown(with: event) }
+    }
+
+    override func mouseDown(with event: NSEvent) {
+        guard let onClick, let window else { return super.mouseDown(with: event) }
+        let start = event.locationInWindow
+        while let next = window.nextEvent(matching: [.leftMouseUp, .leftMouseDragged]) {
+            if next.type == .leftMouseUp {
+                onClick()
+                return
+            }
+            let moved = hypot(next.locationInWindow.x - start.x, next.locationInWindow.y - start.y)
+            if moved > 3 && canDrag() {
+                window.performDrag(with: event)
+                onMoved?(window.frame.origin)
+                return
+            }
+        }
     }
 }
 
@@ -56,7 +78,11 @@ final class Controller: NSObject {
         trayHost = GlassHost(rootView: TrayView(store: store, onTap: { [weak self] in self?.toggle(.list, from: .indicator) }),
                              radius: TrayView.radius)
         trayHost.host.onRightClick = { [weak self] in self?.toggle(.settings, from: .indicator) }
+        trayHost.host.onClick = { [weak self] in self?.toggle(.list, from: .indicator) }
+        trayHost.host.canDrag = { [weak self] in self?.store.state.placement == .free }
+        trayHost.host.onMoved = { [weak self] origin in self?.store.setFreeOrigin(origin) }
         indicatorPanel = makePanel()
+        indicatorPanel.isMovable = true
         indicatorPanel.contentView = trayHost
 
         sheetPanel = makePanel()
@@ -148,7 +174,9 @@ final class Controller: NSObject {
         let area = screen.visibleFrame
         let size = trayHost.fittingSize
         let origin: NSPoint
-        if store.state.placement == .notch {
+        if store.state.placement == .free {
+            origin = freeOrigin(size: size)
+        } else if store.state.placement == .notch {
             // A Mac without a notch: the same tray, centred under the menu bar.
             origin = NSPoint(x: area.midX - size.width / 2, y: area.maxY - size.height)
         } else {
@@ -188,6 +216,19 @@ final class Controller: NSObject {
         // It reads as part of the notch, so it casts no shadow.
         indicatorPanel.hasShadow = false
         setFrame(indicatorPanel, frame)
+    }
+
+    /// Where the person dragged the tray, kept on whichever screen it is on (it starts in the
+    /// bottom-right corner). Dragging moves its left edge; the tray grows to the right.
+    private func freeOrigin(size: NSSize) -> NSPoint {
+        let fallback = NSScreen.screens.first?.visibleFrame ?? .zero
+        guard let x = store.state.freeX, let y = store.state.freeY else {
+            return NSPoint(x: fallback.maxX - size.width - Self.margin, y: fallback.minY + Self.margin)
+        }
+        let point = NSPoint(x: x, y: y)
+        let area = NSScreen.screens.first(where: { $0.frame.contains(point) })?.visibleFrame ?? fallback
+        return NSPoint(x: min(max(point.x, area.minX), area.maxX - size.width),
+                       y: min(max(point.y, area.minY), area.maxY - size.height))
     }
 
     /// Moves a panel and, when its shape changed, has the window server redraw the shadow
@@ -318,11 +359,16 @@ final class Controller: NSObject {
             let ind = indicatorPanel.frame
             if indicatorIsNotch {
                 origin = NSPoint(x: ind.midX - size.width / 2, y: ind.minY - size.height - 8)
-            } else if store.state.placement == .corner {
+            } else if store.state.placement == .corner || store.state.placement == .free {
+                // Open toward the middle of the screen: up from a low tray, down from a high one,
+                // and lined up with whichever edge of the tray is nearer the screen's side.
                 let corner = store.state.corner
+                let screen = NSScreen.screens.first(where: { $0.frame.intersects(ind) })?.frame ?? bounds
+                let low = store.state.placement == .free ? ind.midY < screen.midY : corner.isBottom
+                let right = store.state.placement == .free ? ind.midX > screen.midX : corner.isRight
                 origin = NSPoint(
-                    x: corner.isRight ? ind.maxX - size.width : ind.minX,
-                    y: corner.isBottom ? ind.maxY + 8 : ind.minY - size.height - 8)
+                    x: right ? ind.maxX - size.width : ind.minX,
+                    y: low ? ind.maxY + 8 : ind.minY - size.height - 8)
             } else {
                 origin = NSPoint(x: ind.midX - size.width / 2, y: ind.minY - size.height - 8)
             }

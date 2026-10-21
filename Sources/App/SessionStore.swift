@@ -387,6 +387,13 @@ final class SessionStore: ObservableObject {
         commit()
     }
 
+    /// Remembers where the tray was dragged. Saved without a refresh: nothing else changes.
+    func setFreeOrigin(_ origin: CGPoint) {
+        state.freeX = Double(origin.x)
+        state.freeY = Double(origin.y)
+        state.save()
+    }
+
     func setCorner(_ corner: Corner) {
         state.corner = corner
         commit()

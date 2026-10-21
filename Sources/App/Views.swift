@@ -827,6 +827,12 @@ struct SettingsPanel: View {
                     CornerPicker(selection: store.state.corner) { store.setCorner($0) }
                 }
             }
+            if store.state.placement == .free {
+                Text("Drag the tray anywhere on screen. It stays where you leave it.")
+                    .font(.system(size: 11.5))
+                    .foregroundStyle(Theme.faint)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
             field("Move to idle after") {
                 Chips(options: PersistedState.idleChoices.map { ($0 < 60 ? "\($0)m" : "\($0 / 60)h", $0) },
                       selection: store.state.idleMinutes) { store.setIdleMinutes($0) }
