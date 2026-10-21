@@ -28,7 +28,7 @@ final class IndicatorHost<Content: View>: ClickThroughHost<Content> {
     }
 }
 
-/// Owns everything on screen: the indicator (corner tray or the notch and its chin) that opens the
+/// Owns everything on screen: the indicator (corner tray or notch wings) that opens the
 /// session list, and the menu bar item that opens Settings.
 @MainActor
 final class Controller: NSObject {
@@ -46,7 +46,6 @@ final class Controller: NSObject {
     private var clickMonitor: Any?
     private var cancellables = Set<AnyCancellable>()
     private var snoozedUntil: Date?
-    private var notchHover = false
 
     private static let margin: CGFloat = 2
 
@@ -121,13 +120,8 @@ final class Controller: NSObject {
 
     private var notchScreen: NSScreen? { NSScreen.screens.first(where: { $0.safeAreaInsets.top > 0 }) }
 
-    /// The chin shows while something needs you (unless a terminal is in front and the
-    /// person asked for quiet there), while the pointer is on the notch, or while its list is open.
-    private var showChin: Bool {
-        if notchHover || (sheet != nil && anchor == .indicator) { return true }
-        if store.state.hideInTerminal && terminalIsFrontmost { return false }
-        return Tally(store).needs > 0
-    }
+    /// The wings show their counts unless a terminal is in front and the person asked for
+    /// quiet there; the notch itself stays clickable either way.
 
     private func layout() {
         updateStatusItem()
@@ -168,14 +162,19 @@ final class Controller: NSObject {
     }
 
     private func showNotch(_ notch: NSRect) {
-        let chin = showChin
-        let view = NotchView(store: store, notchWidth: notch.width, notchHeight: notch.height, showChin: chin,
-                             onTap: { [weak self] in self?.toggle(.list, from: .indicator) },
-                             onHover: { [weak self] inside in
-                                 guard let self, self.notchHover != inside else { return }
-                                 self.notchHover = inside
-                                 self.layout()
-                             })
+        let t = Tally(store)
+        let quiet = store.state.hideInTerminal && terminalIsFrontmost && !(sheet != nil && anchor == .indicator)
+        let free = MenuBarSpace.free(beside: notch)
+        // A wing appears only with something to show and room to show it in.
+        func wing(_ wanted: Bool, _ room: CGFloat) -> CGFloat {
+            guard wanted, !quiet else { return 0 }
+            let width = min(NotchView.wing, room - 6)
+            return width >= 30 ? width : 0
+        }
+        let left = wing(t.needs > 0, free.left)
+        let right = wing(t.running > 0, free.right)
+        let view = NotchView(store: store, notchWidth: notch.width, height: notch.height, leftWing: left, rightWing: right,
+                             onTap: { [weak self] in self?.toggle(.list, from: .indicator) })
         if let host = notchHost {
             host.rootView = view
         } else {
@@ -187,8 +186,7 @@ final class Controller: NSObject {
         if indicatorPanel.contentView !== notchHost { indicatorPanel.contentView = notchHost }
         // Above the menu bar, so the panel can sit over the notch itself.
         indicatorPanel.level = NSWindow.Level(rawValue: NSWindow.Level.mainMenu.rawValue + 3)
-        let extra = chin ? NotchView.chinHeight : 0
-        let frame = NSRect(x: notch.minX, y: notch.minY - extra, width: notch.width, height: notch.height + extra)
+        let frame = NSRect(x: notch.minX - left, y: notch.minY, width: notch.width + left + right, height: notch.height)
         // It reads as part of the notch, so it casts no shadow.
         indicatorPanel.hasShadow = false
         setFrame(indicatorPanel, frame)

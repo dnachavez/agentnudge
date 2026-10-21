@@ -52,12 +52,12 @@ that. Click it for the list, click a session to jump to its terminal tab.
 The menu bar icon opens Settings. Its light shows the state at a glance: none when
 all is quiet, small while sessions run, full when one needs you.
 
-On a Mac with a notch, choose **Notch** in Settings. The notch itself becomes the button, and a
-black chin, no wider than the notch, hangs below it while something needs you or the pointer
-is over it, so it never covers your menu bar icons:
+On a Mac with a notch, choose **Notch** in Settings: what needs you sits left of the notch and
+what's running sits right of it. Each side is sized to the free menu bar space next to the
+notch and left out when there is none, so it never covers your menus or menu bar icons:
 
 <p align="center">
-  <img src="docs/images/notch.png" width="340" alt="The chin below the notch">
+  <img src="docs/images/notch.png" width="340" alt="Counts either side of the notch">
 </p>
 
 ## Install

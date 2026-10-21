@@ -225,62 +225,56 @@ struct TrayView: View {
     }
 }
 
-/// The notch indicator. It never reaches sideways into the menu bar, so it can't cover
-/// menu bar icons: the notch itself is the click target, and a black chin hangs below it,
-/// exactly as wide, while something needs you or the pointer is over it.
+/// Wings either side of the notch, in the notch's own black so they read as part of it:
+/// what needs you on the left, what is running on the right. The controller sizes each
+/// wing to the free menu bar space beside the notch, and a wing with no room is left out,
+/// so the wings never cover menu titles or menu bar icons.
 struct NotchView: View {
     @ObservedObject var store: SessionStore
     let notchWidth: CGFloat
-    let notchHeight: CGFloat
-    let showChin: Bool
+    let height: CGFloat
+    let leftWing: CGFloat
+    let rightWing: CGFloat
     var onTap: () -> Void
-    var onHover: (Bool) -> Void
 
-    static let chinHeight: CGFloat = 26
+    /// How wide a wing wants to be; the controller gives it less, or none, when the menu bar is full.
+    static let wing: CGFloat = 46
 
     var body: some View {
         let t = Tally(store)
-        VStack(spacing: 0) {
-            Color.black.frame(width: notchWidth, height: notchHeight)
-            if showChin {
-                chin(t)
-                    .frame(width: notchWidth, height: Self.chinHeight)
-                    .background(Color.black)
-                    .overlay(alignment: .bottom) { if t.needs > 0 { NotchGlow(width: notchWidth) } }
+        HStack(spacing: 0) {
+            HStack(spacing: 6) {
+                if t.needs > 0 {
+                    Dot(color: Theme.waiting, size: 7, glow: true, pulse: true)
+                    Text("\(t.needs)").foregroundStyle(Theme.text)
+                }
             }
+            .frame(width: leftWing)
+            .clipped()
+            Color.black.frame(width: notchWidth)
+            HStack(spacing: 6) {
+                if t.running > 0 {
+                    Dot(color: Theme.running, size: 6)
+                    Text("\(t.running)").foregroundStyle(Theme.sub)
+                }
+            }
+            .frame(width: rightWing)
+            .clipped()
         }
         .font(.system(size: 12, weight: .semibold))
         .monospacedDigit()
-        .clipShape(NotchShape(radius: 10))
+        .frame(height: height)
+        .background(NotchShape(radius: min(10, height / 3)).fill(Color.black))
+        .overlay(alignment: .bottom) {
+            // The notch's lower edge glows while something needs you.
+            if t.needs > 0 { NotchGlow(width: notchWidth) }
+        }
         .contentShape(Rectangle())
         .onTapGesture(perform: onTap)
-        .onHover(perform: onHover)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(t.spoken)
         .accessibilityAddTraits(.isButton)
         .accessibilityAction(.default, onTap)
-    }
-
-    @ViewBuilder private func chin(_ t: Tally) -> some View {
-        HStack(spacing: 8) {
-            if t.needs > 0 {
-                Dot(color: Theme.waiting, size: 7, glow: true, pulse: true)
-                Text("\(t.needs) waiting").foregroundStyle(Theme.text)
-                if t.running > 0 {
-                    Divot()
-                    Text("\(t.running) running").foregroundStyle(Theme.sub)
-                }
-            } else if t.running > 0 {
-                Dot(color: Theme.running, size: 6)
-                Text("\(t.running) running").foregroundStyle(Theme.text)
-            } else if t.idle > 0 {
-                Dot(color: Theme.idle, size: 6)
-                Text("\(t.idle) idle").foregroundStyle(Theme.sub)
-            } else {
-                Text("All clear").foregroundStyle(Theme.sub)
-            }
-        }
-        .padding(.bottom, 2)
     }
 }
 
