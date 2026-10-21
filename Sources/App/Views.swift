@@ -226,9 +226,9 @@ struct TrayView: View {
 }
 
 /// Wings either side of the notch, in the notch's own black so they read as part of it:
-/// what needs you on the left, what is running on the right. The controller sizes each
-/// wing to the free menu bar space beside the notch, and a wing with no room is left out,
-/// so the wings never cover menu titles or menu bar icons.
+/// what needs you on the left, what is running on the right. The controller gives both
+/// the same width, fitted to the tighter side's free menu bar space, and leaves them out
+/// when there is no room, so they never cover menu titles or menu bar icons.
 struct NotchView: View {
     @ObservedObject var store: SessionStore
     let notchWidth: CGFloat

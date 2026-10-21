@@ -165,14 +165,12 @@ final class Controller: NSObject {
         let t = Tally(store)
         let quiet = store.state.hideInTerminal && terminalIsFrontmost && !(sheet != nil && anchor == .indicator)
         let free = MenuBarSpace.free(beside: notch)
-        // A wing appears only with something to show and room to show it in.
-        func wing(_ wanted: Bool, _ room: CGFloat) -> CGFloat {
-            guard wanted, !quiet else { return 0 }
-            let width = min(NotchView.wing, room - 6)
-            return width >= 30 ? width : 0
-        }
-        let left = wing(t.needs > 0, free.left)
-        let right = wing(t.running > 0, free.right)
+        // Both wings are always the same width, set by the tighter side, so the notch stays
+        // centred. They show while there is anything to count, and only if both sides have room.
+        let fit = min(NotchView.wing, min(free.left, free.right) - 6)
+        let show = !quiet && (t.needs > 0 || t.running > 0) && fit >= 30
+        let left: CGFloat = show ? fit : 0
+        let right: CGFloat = show ? fit : 0
         let view = NotchView(store: store, notchWidth: notch.width, height: notch.height, leftWing: left, rightWing: right,
                              onTap: { [weak self] in self?.toggle(.list, from: .indicator) })
         if let host = notchHost {
