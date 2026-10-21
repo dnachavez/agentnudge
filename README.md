@@ -151,8 +151,11 @@ open agentnudge://settings
 open agentnudge://close
 open agentnudge://snooze                        # hide the indicator for an hour
 open "agentnudge://open?id=<session id>"        # jump to a session's tab
-open "agentnudge://launch?folder=$PWD&run=branch&branch=feat/x"   # run: claude, branch, codex, shell
 ```
+
+These only show AgentNudge's own windows or focus a session that is already running.
+Any web page can open a URL like these, so none of them starts a session or runs a
+command; that always takes a click in the launcher.
 
 ## Development
 

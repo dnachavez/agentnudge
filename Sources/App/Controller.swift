@@ -327,7 +327,11 @@ final class Controller: NSObject {
         return Dictionary(items.compactMap { item in item.value.map { (item.name, $0) } }, uniquingKeysWith: { a, _ in a })
     }
 
-    // MARK: URL commands (agentnudge://list, settings, close, snooze)
+    // MARK: URL commands (agentnudge://list, new, settings, close, snooze, open?id=)
+    //
+    // Any web page or app can open these URLs, so none of them runs anything: they only
+    // show AgentNudge's own UI or focus an existing session. Starting a session always
+    // takes a click in the launcher.
 
     func handle(_ url: URL) {
         switch url.host {
@@ -336,12 +340,7 @@ final class Controller: NSObject {
         case "open":
             // agentnudge://open?id=<session id>
             if let id = query(url)["id"], let t = store.threads.first(where: { $0.id == id }) { store.open(t) }
-        case "launch":
-            // agentnudge://launch?folder=<path>&run=claude|branch|codex|shell&branch=<name>
-            let q = query(url)
-            guard let folder = q["folder"] else { return }
-            let kind = SessionStore.Launch.allCases.first { $0.rawValue.lowercased() == (q["run"] ?? "claude").lowercased() } ?? .claude
-            store.launch(kind, in: folder, branch: q["branch"])
+
         case "settings": showSettings()
         case "close": closeSheet()
         case "snooze":
