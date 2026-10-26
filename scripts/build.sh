@@ -13,7 +13,7 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 
 echo "Compiling app"
 swiftc -O -swift-version 5 -target "$TARGET" \
-  -framework AppKit -framework SwiftUI -framework ServiceManagement \
+  -framework AppKit -framework SwiftUI -framework ServiceManagement -framework UserNotifications \
   Sources/App/*.swift -o "$APP/Contents/MacOS/AgentNudge"
 
 echo "Compiling hook helper"

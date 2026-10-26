@@ -11,6 +11,7 @@ enum Paths {
     static let usage = data.appendingPathComponent("usage.json")
     static let bin = data.appendingPathComponent("bin")
     static let state = data.appendingPathComponent("state.json")
+    static let sounds = data.appendingPathComponent("sounds")
 }
 
 enum Bucket: String, CaseIterable, Identifiable {
@@ -55,6 +56,9 @@ struct AgentThread: Identifiable, Equatable {
     /// Percent of the context window in use, from the status line.
     var context: Double? = nil
     var bucket: Bucket = .inProgress
+    /// The status is a fallback, not something the session reported: a Codex rollout with no
+    /// finished turn in it.
+    var statusGuessed: Bool = false
 }
 
 /// Plan usage as Claude Code's status line last reported it.
@@ -120,6 +124,11 @@ struct PersistedState: Codable {
     var claudeCommand = "claude"
     var branchCommand = "claude --worktree {branch}"
     var codexCommand = "codex"
+    var notifications = true
+    var sounds = true
+    /// A system sound name, a file in ~/.agentnudge/sounds, or "" for none.
+    var needsInputSound = "Funk"
+    var finishedSound = "Glass"
 
     static let idleChoices = [10, 20, 30, 60]
 
@@ -141,6 +150,10 @@ struct PersistedState: Codable {
         claudeCommand = try c.decodeIfPresent(String.self, forKey: .claudeCommand) ?? "claude"
         branchCommand = try c.decodeIfPresent(String.self, forKey: .branchCommand) ?? "claude --worktree {branch}"
         codexCommand = try c.decodeIfPresent(String.self, forKey: .codexCommand) ?? "codex"
+        notifications = try c.decodeIfPresent(Bool.self, forKey: .notifications) ?? true
+        sounds = try c.decodeIfPresent(Bool.self, forKey: .sounds) ?? true
+        needsInputSound = try c.decodeIfPresent(String.self, forKey: .needsInputSound) ?? "Funk"
+        finishedSound = try c.decodeIfPresent(String.self, forKey: .finishedSound) ?? "Glass"
     }
 
     static func load() -> PersistedState? {

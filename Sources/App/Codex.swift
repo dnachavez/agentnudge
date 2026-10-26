@@ -8,6 +8,8 @@ final class CodexReader {
         var status = "idle"
         var summary: String?
         var reason: String?
+        /// Idle because nothing says otherwise, not because a turn was seen to finish.
+        var guessed = true
     }
 
     private var tails: [String: (modified: Date, size: UInt64, tail: Tail)] = [:]
@@ -66,7 +68,8 @@ final class CodexReader {
                 waitingReason: tail.reason,
                 lastActivity: updated,
                 kind: text(7) == "cli" ? "codex-cli" : "codex",
-                subagents: []))
+                subagents: [],
+                statusGuessed: tail.guessed))
         }
         return out
     }
@@ -105,6 +108,7 @@ final class CodexReader {
                 switch type {
                 case "task_complete":
                     tail.status = "idle"
+                    tail.guessed = false
                     tail.summary = (payload["last_agent_message"] as? String) ?? lastMessage
                     break scan
                 case "turn_aborted":
@@ -114,6 +118,7 @@ final class CodexReader {
                 case let t where t.contains("approval_request") || t == "request_user_input":
                     tail.status = "waiting"
                     tail.reason = "Waiting for your approval"
+                    tail.guessed = false
                     tail.summary = lastMessage
                     break scan
                 case "task_started":

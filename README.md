@@ -29,6 +29,12 @@ that. Click it for the list, click a session to jump to its terminal tab.
   on a question, a plan approval or a permission prompt, lands in **Needs you**. The
   tray pulses until you've dealt with it. After 20 minutes without a reply (you can
   change this), it moves to **Idle**.
+- **Nudges you.** When a session starts asking you something, or finishes a turn, you
+  get a notification and a sound, a different one for each, so you hear which. Pick the
+  sounds in Settings, or choose **Custom…** to use any audio file; copies are kept in
+  `~/.agentnudge/sounds`. Sounds play even in Focus or Do Not Disturb (turn off **Play
+  sounds** to silence them); banners follow Focus. macOS asks for notification
+  permission the first time one is about to show.
 - **Shows what each session is doing**: its title, Claude Code's latest recap or last
   reply, the project and branch, the permission mode (bypass, plan, auto, accept
   edits, ask), how much of the context window is used, and the subagents still running.

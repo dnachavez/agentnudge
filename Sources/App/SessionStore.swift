@@ -207,6 +207,9 @@ final class SessionStore: ObservableObject {
     @Published private(set) var threads: [AgentThread] = []
     @Published private(set) var state: PersistedState
     @Published private(set) var usage: Usage?
+    /// True once the first scan has been published, so nothing that was already there counts as new.
+    @Published private(set) var scanned = false
+    @Published private(set) var notificationsDenied = false
 
     /// Pids of the apps hosting a live session, so the indicator can step aside in them.
     private(set) var hostAppPids: Set<pid_t> = []
@@ -270,6 +273,7 @@ final class SessionStore: ObservableObject {
         hostAppPids = result.hosts
         if result.usage != usage { usage = result.usage }
         publish(result.threads)
+        if !scanned { scanned = true }
         rememberWorkspaces(result.threads)
         pruneState(keeping: Set(result.threads.map(\.id)))
         if scanAgain {
@@ -343,6 +347,28 @@ final class SessionStore: ObservableObject {
         case .branch: state.branchCommand = command
         case .codex: state.codexCommand = command
         case .shell: return
+        }
+        state.save()
+    }
+
+    func setNotificationsDenied(_ denied: Bool) {
+        if notificationsDenied != denied { notificationsDenied = denied }
+    }
+
+    func setNotifications(_ on: Bool) {
+        state.notifications = on
+        state.save()
+    }
+
+    func setSounds(_ on: Bool) {
+        state.sounds = on
+        state.save()
+    }
+
+    func setSound(_ kind: NotifyKind, _ name: String) {
+        switch kind {
+        case .needsInput: state.needsInputSound = name
+        case .finished: state.finishedSound = name
         }
         state.save()
     }

@@ -791,6 +791,7 @@ struct Meter: View {
 struct SettingsPanel: View {
     @ObservedObject var store: SessionStore
     var onQuit: () -> Void
+    var onShown: () -> Void = {}
     @State private var openAtLogin = LoginItem.enabled
 
     static let radius: CGFloat = 14
@@ -846,10 +847,33 @@ struct SettingsPanel: View {
                 }
             }
 
+            field("Sounds") {
+                VStack(spacing: 6) {
+                    SoundRow(kind: .needsInput, current: store.state.needsInputSound) { store.setSound(.needsInput, $0) }
+                    SoundRow(kind: .finished, current: store.state.finishedSound) { store.setSound(.finished, $0) }
+                }
+                .disabled(!store.state.sounds)
+                .opacity(store.state.sounds ? 1 : 0.4)
+            }
+
             Rectangle().fill(Theme.hairline).frame(height: 1)
 
             VStack(spacing: 12) {
                 SwitchRow(title: "Hide when a terminal is focused", on: store.state.hideInTerminal) { store.setHideInTerminal($0) }
+                SwitchRow(title: "Show notifications", on: store.state.notifications) { store.setNotifications($0) }
+                if store.state.notifications && store.notificationsDenied {
+                    HStack {
+                        Text("Off in System Settings").font(.system(size: 12)).foregroundStyle(Theme.faint)
+                        Spacer()
+                        TextAction(title: "Open") {
+                            if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings.extension") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                        .accessibilityLabel("Open Notification settings")
+                    }
+                }
+                SwitchRow(title: "Play sounds", on: store.state.sounds) { store.setSounds($0) }
                 SwitchRow(title: "Open at login", on: openAtLogin) { on in
                     LoginItem.set(on)
                     openAtLogin = LoginItem.enabled
@@ -875,6 +899,7 @@ struct SettingsPanel: View {
         .frame(width: 296)
         .surface(RoundedRectangle(cornerRadius: Self.radius, style: .continuous))
         .fixedSize()
+        .onAppear(perform: onShown)
     }
 
     private func field<C: View>(_ label: String, @ViewBuilder _ content: () -> C) -> some View {
@@ -912,6 +937,59 @@ struct CommandField: View {
                 .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(0.06)))
                 .onChange(of: value) { _, new in set(new) }
         }
+    }
+}
+
+/// A sound for one kind of nudge, picked from a menu. Choosing one plays it.
+struct SoundRow: View {
+    let kind: NotifyKind
+    let current: String
+    let set: (String) -> Void
+
+    private var name: String {
+        if current.isEmpty { return "None" }
+        return Sounds.isMissing(current) ? "\(current) (missing)" : current
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Text(kind.title).font(.system(size: 12)).foregroundStyle(Theme.sub).frame(width: 84, alignment: .leading)
+            Menu {
+                Button("None") { pick("") }
+                Divider()
+                ForEach(Sounds.system, id: \.self) { sound in Button(sound) { pick(sound) } }
+                let files = Sounds.customFiles()
+                if !files.isEmpty {
+                    Divider()
+                    ForEach(files, id: \.self) { file in Button(file) { pick(file) } }
+                }
+                Divider()
+                Button("Custom…") { Sounds.importFile { pick($0) } }
+            } label: {
+                HStack(spacing: 6) {
+                    Text(name)
+                        .font(.system(size: 11.5))
+                        .foregroundStyle(Theme.text)
+                        .lineLimit(1)
+                        .truncationMode(.middle)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 8, weight: .semibold)).foregroundStyle(Theme.faint)
+                }
+                .padding(.horizontal, 8)
+                .frame(height: 24)
+                .background(RoundedRectangle(cornerRadius: 6, style: .continuous).fill(Color.white.opacity(0.06)))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .menuIndicator(.hidden)
+            .accessibilityLabel("\(kind.title) sound")
+            .accessibilityValue(name)
+        }
+    }
+
+    private func pick(_ sound: String) {
+        set(sound)
+        Sounds.play(sound, fallback: kind.defaultSound)
     }
 }
 
