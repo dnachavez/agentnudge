@@ -20,16 +20,24 @@ enum HookHelper {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private var store: SessionStore?
     private var controller: Controller?
+    private var notifier: Notifier?
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSAppleEventManager.shared().setEventHandler(
             self, andSelector: #selector(handleURL(_:reply:)),
             forEventClass: AEEventClass(kInternetEventClass), andEventID: AEEventID(kAEGetURL))
+        // Set this early so a click on a banner that relaunched the app is delivered. A second
+        // copy gets no notifier, so it never becomes the delegate.
+        if !Self.alreadyRunning { notifier = Notifier() }
+    }
+
+    private static var alreadyRunning: Bool {
+        guard let id = Bundle.main.bundleIdentifier else { return false }
+        return NSRunningApplication.runningApplications(withBundleIdentifier: id).count > 1
     }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if let id = Bundle.main.bundleIdentifier,
-           NSRunningApplication.runningApplications(withBundleIdentifier: id).count > 1 {
+        guard let notifier, !Self.alreadyRunning else {
             NSApp.terminate(nil)
             return
         }
@@ -38,6 +46,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.store = store
         let controller = Controller(store: store)
         self.controller = controller
+        controller.onSettingsShown = { [weak notifier] in notifier?.refreshAuthorization() }
+        notifier.attach(store: store) { [weak controller] id in
+            var link = URLComponents()
+            link.scheme = "agentnudge"
+            link.host = "open"
+            link.queryItems = [URLQueryItem(name: "id", value: id)]
+            if let url = link.url { controller?.handle(url) }
+        }
         store.start()
         if !store.state.onboarded {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { controller.showSettings() }

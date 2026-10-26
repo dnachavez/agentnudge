@@ -71,6 +71,9 @@ final class Controller: NSObject {
     /// True while the controller itself moves the indicator, so only the person's drags are saved.
     private var placingIndicator = false
 
+    /// Called each time Settings opens, to refresh what it shows about notification permission.
+    var onSettingsShown: () -> Void = {}
+
     private static let margin: CGFloat = 2
 
     init(store: SessionStore) {
@@ -325,7 +328,7 @@ final class Controller: NSObject {
                                                                   onLaunched: { [weak self] in self?.closeSheet() }, launching: true),
                                                radius: ListView.radius)
         case .settings:
-            sheetPanel.contentView = GlassHost(rootView: SettingsPanel(store: store, onQuit: { NSApp.terminate(nil) }),
+            sheetPanel.contentView = GlassHost(rootView: SettingsPanel(store: store, onQuit: { NSApp.terminate(nil) }, onShown: onSettingsShown),
                                                radius: SettingsPanel.radius)
         }
         sheetPanel.hasShadow = true
@@ -385,6 +388,7 @@ final class Controller: NSObject {
             }
         }
         origin.x = min(max(origin.x, bounds.minX + 6), bounds.maxX - size.width - 6)
+        origin.y = min(max(origin.y, bounds.minY + 6), bounds.maxY - size.height - 6)
         setFrame(sheetPanel, NSRect(origin: origin, size: size))
     }
 
